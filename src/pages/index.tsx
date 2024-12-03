@@ -1,115 +1,196 @@
-import Image from "next/image";
-import localFont from "next/font/local";
+import { useState } from 'react';
+import TaskEditor from './components/TaskEditor';
+import TaskCard from './components/TaskCard';
+import Modal from './components/Model';
+import ConfirmationModal from './components/ConfirmationModal';
+import Navbar from './components/Navbar';
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  dueDate: string;
+  completed: boolean;
+}
 
 export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [tasks, setTasks] = useState<Task[]>([
+    {
+      id: 1,
+      title: 'Finish project proposal',
+      description: 'Write up the project proposal and send it to the client',
+      dueDate: '2023-06-15',
+      completed: false
+    },
+    {
+      id: 2,
+      title: 'Attend team meeting',
+      description: 'Discuss the project progress with the team',
+      dueDate: '2023-06-10',
+      completed: true
+    },
+    {
+      id: 3,
+      title: 'Implement new feature',
+      description: 'Add the new feature to the application',
+      dueDate: '2023-06-20',
+      completed: false
+    },
+    {
+      id: 4,
+      title: 'Review code changes',
+      description: 'Review the latest code changes before merging',
+      dueDate: '2023-06-12',
+      completed: false
+    },
+    {
+      id: 5,
+      title: 'Deploy to production',
+      description: 'Deploy the latest version to the production environment',
+      dueDate: '2023-06-18',
+      completed: true
+    }
+  ]);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false); // State for filter modal
+  const [filter, setFilter] = useState<string>('All Tasks'); // Active filter
+  const [searchQuery, setSearchQuery] = useState<string>(''); // State for search query
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleAddTask = (task: Task) => {
+    setTasks([...tasks, { ...task, id: Date.now(), completed: false }]);
+    setIsModalOpen(false);
+  };
+
+  const handleUpdateTask = (task: Task) => {
+    setTasks(tasks.map(t => (t.id === task.id ? task : t)));
+    setIsModalOpen(false);
+  };
+
+  const handleDeleteTask = (id: number) => {
+    setTaskToDelete(id); // Set the task to be deleted
+    setIsConfirmationOpen(true); // Open the confirmation modal
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete !== null) {
+      setTasks(tasks.filter(task => task.id !== taskToDelete)); // Delete the task
+      setTaskToDelete(null); // Reset the task to delete
+    }
+    setIsConfirmationOpen(false); // Close the confirmation modal
+  };
+
+  const handleToggleComplete = (id: number) => {
+    setTasks(tasks.map(task => (task.id === id ? { ...task, completed: !task.completed } : task)));
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsModalOpen(true);
+  };
+
+  const toggleFilterModal = () => {
+    setIsFilterModalOpen(!isFilterModalOpen); // Toggle filter modal state
+  };
+
+  const applyFilter = (selectedFilter: string) => {
+    setFilter(selectedFilter); // Set the selected filter
+    setIsFilterModalOpen(false); // Close the filter modal
+  };
+
+  const filteredTasks = () => {
+    const currentDate = new Date();
+    return tasks.filter(task => {
+      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
+      switch (filter) {
+        case 'Completed Tasks':
+          return task.completed && matchesSearch;
+        case 'Pending Tasks':
+          return !task.completed && matchesSearch;
+        case 'Overdue Tasks':
+          return new Date(task.dueDate) < currentDate && matchesSearch;
+        default:
+          return matchesSearch; // All Tasks
+      }
+    });
+  };
+
+  // Render filter options inside the modal
+  const renderFilterOptions = () => {
+    const filters = ['All Tasks', 'Completed Tasks', 'Pending Tasks', 'Overdue Tasks'];
+    return (
+      <div>
+        <div className="mb-4 text-lg font-semibold">Select Filter</div>
+        <ul className="flex flex-col space-y-2">
+          {filters.map(filterOption => (
+            <li key={filterOption}>
+              <button
+                onClick={() => applyFilter(filterOption)} 
+                className="w-full text-left p-2 bg-gray-200 hover:bg-gray-300"
+              >
+                {filterOption}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-screen w-full flex flex-col bg-gray-700">
+      <Navbar />
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <TaskEditor 
+          onAddTask={handleAddTask} 
+          onUpdateTask={handleUpdateTask} 
+          editingTask={editingTask} 
+        />
+      </Modal>
+      <Modal isOpen={isFilterModalOpen} onClose={toggleFilterModal}>
+        {renderFilterOptions()}
+      </Modal>
+      <ConfirmationModal 
+        isOpen={isConfirmationOpen} 
+        onClose={() => setIsConfirmationOpen(false)} 
+        onConfirm={confirmDeleteTask} 
+      />
+      <div className="flex-1 overflow-y-auto mt-2 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredTasks().length === 0 ? (
+            <div className="text-gray-500 col-span-full">No tasks available</div>
+          ) : (
+            filteredTasks().map(task => (
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                onEdit={handleEditTask} 
+                onDelete={handleDeleteTask} 
+                onToggleComplete={handleToggleComplete} 
+              />
+            ))
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </div>
+      <div className="absolute bottom-10 right-4 flex flex-col items-center">
+        <button
+          onClick={toggleFilterModal} // Open the filter modal
+          className="bg-blue-600 text-white w-14 h-14 rounded-lg flex items-center justify-center shadow-lg mb-2"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <img src="https://img.icons8.com/ios-filled/24/ffffff/filter.png" alt="Filter" />
+        </button>
+        <button
+          onClick={() => {
+            setEditingTask(null);
+            setIsModalOpen(true);
+          }}
+          className="bg-green-600 text-white w-14 h-14 rounded-lg flex items-center justify-center shadow-lg"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <span className="text-3xl font-bold">+</span>
+        </button>
+      </div>
     </div>
   );
 }
