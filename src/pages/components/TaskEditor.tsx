@@ -34,6 +34,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ onAddTask, onUpdateTask, editin
     const task = { title, description, dueDate };
     if (editingTask) {
       onUpdateTask({
+        ...editingTask, ...task,
         id: 0
       });
     } else {
