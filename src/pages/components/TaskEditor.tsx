@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 
 interface Task {
+  id: number;
   title: string;
   description: string;
   dueDate: string;
+  completed: boolean; // Include the completed field
 }
 
 interface TaskEditorProps {
-  onAddTask: (task: Task & { id: number }) => void;
-  onUpdateTask: (task: Task & { id: number }) => void;
+  onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
+  onUpdateTask: (task: Task) => void;
   editingTask: Task | null;
 }
 
 const TaskEditor: React.FC<TaskEditorProps> = ({ onAddTask, onUpdateTask, editingTask }) => {
-  const [title, setTitle] = useState(editingTask ? editingTask.title : '');
-  const [description, setDescription] = useState(editingTask ? editingTask.description : '');
-  const [dueDate, setDueDate] = useState(editingTask ? editingTask.dueDate : '');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
     if (editingTask) {
@@ -31,18 +33,15 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ onAddTask, onUpdateTask, editin
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const task = { title, description, dueDate };
+    const taskData = { title, description, dueDate };
     if (editingTask) {
       onUpdateTask({
-        ...editingTask, ...task,
-        id: 0
+        ...editingTask,
+        ...taskData,
       });
     } else {
-      onAddTask({ ...task, id: Date.now() }); // Generate a unique ID
+      onAddTask(taskData);
     }
-    setTitle('');
-    setDescription('');
-    setDueDate('');
   };
 
   return (
@@ -69,6 +68,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ onAddTask, onUpdateTask, editin
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           className="border p-2 mb-2"
+          required
         />
         <button
           type="submit"
