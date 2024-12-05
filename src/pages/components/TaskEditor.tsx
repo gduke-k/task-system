@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
 interface Task {
+  id: number;
   title: string;
   description: string;
   dueDate: string;
+  completed: boolean; // Include the completed field
 }
 
 interface TaskEditorProps {
-  onAddTask: (task: Task & { id: number }) => void;
-  onUpdateTask: (task: Task & { id: number }) => void;
-  editingTask: Task & { id: number } | null;
+  onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
+  onUpdateTask: (task: Task) => void;
+  editingTask: Task | null;
 }
 
 const TaskEditor: React.FC<TaskEditorProps> = ({ onAddTask, onUpdateTask, editingTask }) => {
@@ -31,19 +33,15 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ onAddTask, onUpdateTask, editin
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const task = { title, description, dueDate };
+    const taskData = { title, description, dueDate };
     if (editingTask) {
       onUpdateTask({
-        ...editingTask, 
-        ...task 
+        ...editingTask,
+        ...taskData,
       });
     } else {
-      onAddTask({ ...task, id: Date.now() }); // Generate a unique ID for new tasks
+      onAddTask(taskData);
     }
-    // Reset fields after submission
-    setTitle('');
-    setDescription('');
-    setDueDate('');
   };
 
   return (
